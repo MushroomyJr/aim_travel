@@ -2,7 +2,7 @@ package com.aim.service.impl;
 
 import com.aim.config.ApiConfig;
 import com.aim.dto.TicketSearchRequest;
-import com.aim.dto.TicketSearchResponse;
+import com.aim.dto.PaginatedResponse;
 import com.aim.model.FlightTicket;
 import com.aim.service.AmadeusApiService;
 import com.aim.service.TicketService;
@@ -28,28 +28,44 @@ public class TicketServiceImpl implements TicketService {
     private final Random random = new Random();
 
     @Override
-    public TicketSearchResponse searchTickets(TicketSearchRequest searchRequest) {
-        log.info("Searching tickets for: {} to {} on {}", 
+    public PaginatedResponse<FlightTicket> searchTickets(TicketSearchRequest searchRequest) {
+        log.info("Searching tickets for: {} to {} on {} (page: {}, size: {})", 
                 searchRequest.getOrigin(), 
                 searchRequest.getDestination(), 
-                searchRequest.getDepartureDate());
+                searchRequest.getDepartureDate(),
+                searchRequest.getPage(),
+                searchRequest.getSize());
         
-        List<FlightTicket> tickets = new ArrayList<>();
+        List<FlightTicket> allTickets = new ArrayList<>();
         
         // Try to get real tickets from Amadeus API if available
         if (amadeusApiService.isApiAvailable() && !apiConfig.isUseMockData()) {
             log.info("Attempting to fetch real tickets from Amadeus API");
-            tickets = amadeusApiService.searchRealTickets(searchRequest);
+            allTickets = amadeusApiService.searchRealTickets(searchRequest);
         }
         
         // If no real tickets found or API not available, fall back to mock data
-        if (tickets.isEmpty()) {
+        if (allTickets.isEmpty()) {
             log.info("Using mock data for ticket search");
-            tickets = generateMockTickets(searchRequest);
+            allTickets = generateMockTickets(searchRequest);
         }
         
-        log.info("Returning {} tickets", tickets.size());
-        return new TicketSearchResponse(tickets);
+        // Apply pagination
+        List<FlightTicket> paginatedTickets = applyPagination(allTickets, searchRequest.getPage(), searchRequest.getSize());
+        
+        // Create pagination metadata
+        PaginatedResponse.PaginationMetadata metadata = createPaginationMetadata(
+                allTickets.size(), 
+                searchRequest.getPage(), 
+                searchRequest.getSize()
+        );
+        
+        log.info("Returning {} tickets (page {} of {})", 
+                paginatedTickets.size(), 
+                metadata.getPage() + 1, 
+                metadata.getTotalPages());
+        
+        return new PaginatedResponse<>(paginatedTickets, metadata);
     }
 
     private List<FlightTicket> generateMockTickets(TicketSearchRequest request) {
@@ -104,5 +120,30 @@ public class TicketServiceImpl implements TicketService {
         }
         
         return ticket;
+    }
+    
+    /**
+     * Apply pagination to a list of tickets
+     */
+    private List<FlightTicket> applyPagination(List<FlightTicket> tickets, int page, int size) {
+        int startIndex = page * size;
+        int endIndex = Math.min(startIndex + size, tickets.size());
+        
+        if (startIndex >= tickets.size()) {
+            return new ArrayList<>();
+        }
+        
+        return tickets.subList(startIndex, endIndex);
+    }
+    
+    /**
+     * Create pagination metadata
+     */
+    private PaginatedResponse.PaginationMetadata createPaginationMetadata(int totalElements, int page, int size) {
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        boolean hasNext = page < totalPages - 1;
+        boolean hasPrevious = page > 0;
+        
+        return new PaginatedResponse.PaginationMetadata(page, size, totalElements, totalPages, hasNext, hasPrevious);
     }
 } 

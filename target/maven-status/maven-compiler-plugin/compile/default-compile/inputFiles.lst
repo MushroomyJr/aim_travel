@@ -5,6 +5,7 @@ D:\dev\aim_backend\src\main\java\com\aim\dto\OrderRequest.java
 D:\dev\aim_backend\src\main\java\com\aim\model\Order.java
 D:\dev\aim_backend\src\main\java\com\aim\AimBackendApplication.java
 D:\dev\aim_backend\src\main\java\com\aim\dto\TicketSearchRequest.java
+D:\dev\aim_backend\src\main\java\com\aim\dto\PaginatedResponse.java
 D:\dev\aim_backend\src\main\java\com\aim\controller\OrderController.java
 D:\dev\aim_backend\src\main\java\com\aim\service\impl\OrderServiceImpl.java
 D:\dev\aim_backend\src\main\java\com\aim\service\TicketService.java

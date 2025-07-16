@@ -1,7 +1,8 @@
 package com.aim.controller;
 
 import com.aim.dto.TicketSearchRequest;
-import com.aim.dto.TicketSearchResponse;
+import com.aim.dto.PaginatedResponse;
+import com.aim.model.FlightTicket;
 import com.aim.service.TicketService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,19 +25,24 @@ public class TicketController {
     private final TicketService ticketService;
 
     /**
-     * Search for available tickets based on criteria
+     * Search for available tickets based on criteria with pagination
      * POST /api/v1/tickets/search
      */
     @PostMapping("/search")
-    public ResponseEntity<TicketSearchResponse> searchTickets(@Valid @RequestBody TicketSearchRequest searchRequest) {
-        log.info("Received ticket search request: {} to {} on {}", 
+    public ResponseEntity<PaginatedResponse<FlightTicket>> searchTickets(@Valid @RequestBody TicketSearchRequest searchRequest) {
+        log.info("Received ticket search request: {} to {} on {} (page: {}, size: {})", 
                 searchRequest.getOrigin(), 
                 searchRequest.getDestination(), 
-                searchRequest.getDepartureDate());
+                searchRequest.getDepartureDate(),
+                searchRequest.getPage(),
+                searchRequest.getSize());
         
-        TicketSearchResponse response = ticketService.searchTickets(searchRequest);
+        PaginatedResponse<FlightTicket> response = ticketService.searchTickets(searchRequest);
         
-        log.info("Found {} tickets matching criteria", response.getTickets().size());
+        log.info("Found {} tickets matching criteria (page {} of {})", 
+                response.getData().size(),
+                response.getPagination().getPage() + 1,
+                response.getPagination().getTotalPages());
         
         return ResponseEntity.ok(response);
     }

@@ -9,7 +9,9 @@ com\aim\config\WebClientConfig.class
 com\aim\dto\OrderRequest.class
 com\aim\controller\OrderController.class
 com\aim\controller\TicketController.class
+com\aim\dto\PaginatedResponse.class
 com\aim\service\TicketService.class
+com\aim\dto\PaginatedResponse$PaginationMetadata.class
 com\aim\model\FlightTicket.class
 com\aim\AimBackendApplication.class
 com\aim\service\impl\TicketServiceImpl.class
