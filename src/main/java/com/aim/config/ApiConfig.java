@@ -8,8 +8,9 @@ import lombok.Data;
 @Configuration
 @ConfigurationProperties(prefix = "app.api")
 public class ApiConfig {
+
     private String amadeusClientId;
     private String amadeusClientSecret;
     private String amadeusBaseUrl = "https://test.api.amadeus.com/v2";
-    private boolean useMockData = true; // Default to mock data for development
-} 
+    private boolean useMockData = false;
+}

@@ -1,23 +1,6 @@
-server:
-  port: 8080
-
-spring:
-  application:
-    name: aim-backend
-
-logging:
-  level:
-    com.aim: DEBUG
-    org.springframework.web: DEBUG
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
-
-# API Configuration
 app:
   api:
-    # Set to false to use real Amadeus API (requires valid credentials)
-    use-mock-data: false
-    # Amadeus API credentials (get from https://developers.amadeus.com/)
-    amadeus-client-id: a0iahRmoeamxMNGcKodHc1Yp2PYjTwGd
-    amadeus-client-secret: TouHvCEZsMQQz1vA
-    amadeus-base-url: https://test.api.amadeus.com/v2
+    amadeusClientId: a0iahRmoeamxMNGcKodHc1Yp2PYjTwGd
+    amadeusClientSecret: TouHvCEZsMQQz1vA
+    amadeusBaseUrl: https://test.api.amadeus.com/v2
+    useMockData: false
