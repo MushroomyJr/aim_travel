@@ -1,8 +1,11 @@
+com\aim\model\User.class
 com\aim\service\OrderService.class
 com\aim\config\ApiConfig.class
 com\aim\service\impl\OrderServiceImpl.class
 com\aim\service\impl\AmadeusApiServiceImpl.class
+com\aim\model\Order$OrderBuilder.class
 com\aim\service\AmadeusApiService.class
+com\aim\model\User$UserBuilder.class
 com\aim\model\Order.class
 com\aim\dto\TicketSearchRequest.class
 com\aim\config\WebClientConfig.class

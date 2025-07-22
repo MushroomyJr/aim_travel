@@ -5,25 +5,21 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "orders")
+@Table(name = "users", uniqueConstraints = {@UniqueConstraint(columnNames = "email")})
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Order {
+public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, unique = true)
-    private String orderNumber;
+    private String email;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
-    private User user;
-
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String ticketInfo;
+    @Column(nullable = false)
+    private String password;
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
