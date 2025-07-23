@@ -10,5 +10,23 @@ import java.util.List;
 @AllArgsConstructor
 public class OrderRequest {
     private List<String> ticketIds;
-    private String userId; // optional for now
+    private Long userId;
+    private int cost;
+    private String ticketInfo;
+
+    public String getTicketInfo() {
+        return ticketInfo;
+    }
+
+    public void setTicketInfo(String ticketInfo) {
+        this.ticketInfo = ticketInfo;
+    }
+
+    public Long getUserId() {
+        return userId;
+    }
+
+    public void setUserId(Long userId) {
+        this.userId = userId;
+    }
 } 

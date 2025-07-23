@@ -26,7 +26,8 @@ public class OrderController {
      */
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody OrderRequest orderRequest) {
-        log.info("Received order creation request for {} tickets", orderRequest.getTicketIds().size());
+        int ticketCount = orderRequest.getTicketIds() != null ? orderRequest.getTicketIds().size() : 0;
+        log.info("Received order creation request for {} tickets", ticketCount);
         
         OrderResponse response = orderService.createOrder(orderRequest);
         

@@ -21,7 +21,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponse createOrder(OrderRequest orderRequest) {
-        log.info("Creating order for {} tickets", orderRequest.getTicketIds().size());
+        int ticketCount = orderRequest.getTicketIds() != null ? orderRequest.getTicketIds().size() : 0;
+        log.info("Creating order for {} tickets", ticketCount);
         
         // For MVP, we'll generate mock tickets based on the ticket IDs
         List<FlightTicket> tickets = generateMockTicketsFromIds(orderRequest.getTicketIds());
@@ -38,7 +39,7 @@ public class OrderServiceImpl implements OrderService {
         response.setTickets(tickets);
         response.setTotalPrice(totalPrice);
         response.setCreatedAt(LocalDateTime.now());
-        response.setUserId(orderRequest.getUserId());
+        response.setUserId(orderRequest.getUserId().toString());
         
         log.info("Order created with ID: {}", orderId);
         
