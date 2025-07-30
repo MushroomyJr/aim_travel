@@ -1,11 +1,11 @@
 package com.aim.model;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "users", uniqueConstraints = {@UniqueConstraint(columnNames = "email")})
+@Table(name = "users")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -22,10 +22,8 @@ public class User {
     private String password;
 
     @Column(nullable = false)
+    private String name;
+    
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
-
-    public User orElseThrow(Object object) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'orElseThrow'");
-    }
 } 

@@ -1,9 +1,12 @@
 package com.aim.service.impl;
 
 import com.aim.config.ApiConfig;
-import com.aim.dto.TicketSearchRequest;
 import com.aim.dto.PaginatedResponse;
+import com.aim.dto.TicketSearchRequest;
 import com.aim.model.FlightTicket;
+import com.aim.model.User;
+import com.aim.repository.FlightTicketRepository;
+import com.aim.repository.UserRepository;
 import com.aim.service.AmadeusApiService;
 import com.aim.service.TicketService;
 import lombok.RequiredArgsConstructor;
@@ -25,28 +28,28 @@ public class TicketServiceImpl implements TicketService {
 
     private final ApiConfig apiConfig;
     private final AmadeusApiService amadeusApiService;
+    private final FlightTicketRepository flightTicketRepository;
+    private final UserRepository userRepository;
     private final Random random = new Random();
 
     @Override
     public PaginatedResponse<FlightTicket> searchTickets(TicketSearchRequest searchRequest) {
-        log.info("Searching tickets for: {} to {} on {} (page: {}, size: {})", 
+        log.info("Searching tickets from {} to {} on {}", 
                 searchRequest.getOrigin(), 
                 searchRequest.getDestination(), 
-                searchRequest.getDepartureDate(),
-                searchRequest.getPage(),
-                searchRequest.getSize());
-        
+                searchRequest.getDepartureDate());
+
         List<FlightTicket> allTickets = new ArrayList<>();
-        
-        // Try to get real tickets from Amadeus API if available
-        if (amadeusApiService.isApiAvailable() && !apiConfig.isUseMockData()) {
-            log.info("Attempting to fetch real tickets from Amadeus API");
+
+        // Try to get real tickets from Amadeus API first
+        if (amadeusApiService.isApiAvailable()) {
+            log.info("Amadeus API is available, searching for real tickets");
             allTickets = amadeusApiService.searchRealTickets(searchRequest);
         }
-        
-        // If no real tickets found or API not available, fall back to mock data
+
+        // If no real tickets found, generate mock tickets
         if (allTickets.isEmpty()) {
-            log.info("Using mock data for ticket search");
+            log.info("No real tickets found, generating mock tickets");
             allTickets = generateMockTickets(searchRequest);
         }
         
@@ -95,17 +98,16 @@ public class TicketServiceImpl implements TicketService {
         int flightMinutes = random.nextInt(60);
         LocalDateTime arrivalDateTime = departureDateTime.plusHours(flightHours).plusMinutes(flightMinutes);
         
-        // Price between $100-$800
-        BigDecimal price = new BigDecimal(100 + random.nextInt(700));
+        // Cost between $100-$800
+        BigDecimal cost = new BigDecimal(100 + random.nextInt(700));
         
         FlightTicket ticket = new FlightTicket();
-        ticket.setId("TICKET-" + System.currentTimeMillis() + "-" + index);
         ticket.setOrigin(request.getOrigin());
         ticket.setDestination(request.getDestination());
         ticket.setDepartureTime(departureDateTime);
         ticket.setArrivalTime(arrivalDateTime);
         ticket.setAirline(airline);
-        ticket.setPrice(price);
+        ticket.setCost(cost);
         ticket.setStops(random.nextInt(2)); // 0 or 1 stops
         ticket.setRoundTrip(request.isRoundTrip());
         

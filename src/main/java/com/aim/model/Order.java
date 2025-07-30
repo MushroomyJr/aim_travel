@@ -1,7 +1,8 @@
 package com.aim.model;
 
-import lombok.*;
 import jakarta.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -15,16 +16,41 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String orderNumber;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
     private User user;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "flight_ticket", referencedColumnName = "id", nullable = false)
+    private FlightTicket flightTicket;
+
+    @Column(name = "email", nullable = false)
+    private String email;
+
+    @Column(name = "ticket_info", nullable = false)
     private String ticketInfo;
 
+    @Column(name = "order_number", nullable = false, unique = true)
+    private String orderNumber;
+
+    @Column(name = "itenary_number", nullable = false, unique = true)
+    private String itineraryNumber;
+
     @Column(nullable = false)
+    private BigDecimal cost;
+
+    // Optional fields for future expansion
+    @Column(nullable = true)
+    private String hotelStayOrder;
+
+    @Column(nullable = true)
+    private String rentalOrder;
+
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 } 

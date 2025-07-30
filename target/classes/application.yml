@@ -10,14 +10,15 @@ spring:
     password: Unlock76!
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
-    database-platform: org.hibernate.dialect.MySQL8Dialect
+    database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: create-drop
 
 logging:
   level:
     com.aim: DEBUG
     org.springframework.web: DEBUG
+    org.springframework.web.reactive.function.client: DEBUG
   pattern:
     console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
 
@@ -25,8 +26,9 @@ logging:
 app:
   api:
     # Set to false to use real Amadeus API (requires valid credentials)
-    use-mock-data: false
     # Amadeus API credentials (get from https://developers.amadeus.com/)
     amadeus-client-id: a0iahRmoeamxMNGcKodHc1Yp2PYjTwGd
     amadeus-client-secret: TouHvCEZsMQQz1vA
+    # Use 'test' for test environment, 'production' for production
+    amadeus-environment: test
     amadeus-base-url: https://test.api.amadeus.com/v2
