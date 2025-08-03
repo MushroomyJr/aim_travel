@@ -15,4 +15,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findByItineraryNumber(String itineraryNumber);
     
     List<Order> findByUserEmailOrderByCreatedAtDesc(String email);
+    
+    Optional<Order> findByStripeSessionId(String stripeSessionId);
 } 

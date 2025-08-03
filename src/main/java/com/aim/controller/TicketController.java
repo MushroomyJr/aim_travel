@@ -2,11 +2,14 @@ package com.aim.controller;
 
 import com.aim.dto.TicketSearchRequest;
 import com.aim.dto.PaginatedResponse;
+import com.aim.dto.CreateTicketRequest;
+import com.aim.dto.CreateTicketResponse;
 import com.aim.model.FlightTicket;
 import com.aim.model.User;
 import com.aim.repository.FlightTicketRepository;
 import com.aim.repository.UserRepository;
 import com.aim.service.TicketService;
+import com.aim.service.TicketCreationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -24,10 +27,10 @@ import java.util.Optional;
 @RequestMapping("/api/v1/tickets")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class TicketController {
 
     private final TicketService ticketService;
+    private final TicketCreationService ticketCreationService;
     private final FlightTicketRepository flightTicketRepository;
     private final UserRepository userRepository;
 
@@ -55,7 +58,29 @@ public class TicketController {
     }
 
     /**
-     * Create a new flight ticket for a user
+     * Create a new flight ticket with payment session
+     * POST /api/v1/tickets/create
+     */
+    @PostMapping("/create")
+    public ResponseEntity<CreateTicketResponse> createTicketWithPayment(@Valid @RequestBody CreateTicketRequest request) {
+        log.info("Creating ticket with payment for passenger: {}", request.getPassenger());
+        
+        try {
+            CreateTicketResponse response = ticketCreationService.createTicketWithPayment(request);
+            log.info("Ticket created successfully with ID: {} and payment session: {}", 
+                    response.getTicketId(), response.getPaymentSessionId());
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (Exception e) {
+            log.error("Error creating ticket with payment: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(CreateTicketResponse.builder()
+                            .status("error")
+                            .build());
+        }
+    }
+
+    /**
+     * Create a new flight ticket for a user (legacy endpoint)
      * POST /api/v1/tickets
      */
     @PostMapping

@@ -2,9 +2,12 @@ package com.aim.controller;
 
 import com.aim.dto.OrderRequest;
 import com.aim.dto.OrderResponse;
+import com.aim.dto.UpdateOrderPaymentRequest;
+import com.aim.dto.UpdateOrderPaymentResponse;
 import com.aim.model.Order;
 import com.aim.repository.OrderRepository;
 import com.aim.service.OrderService;
+import com.aim.service.OrderPaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -19,10 +22,10 @@ import java.util.Optional;
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class OrderController {
 
     private final OrderService orderService;
+    private final OrderPaymentService orderPaymentService;
     private final OrderRepository orderRepository;
 
     /**
@@ -87,5 +90,58 @@ public class OrderController {
         }
         
         return ResponseEntity.ok(order.get());
+    }
+
+    /**
+     * Update order payment status
+     * PUT /api/v1/orders/payment/update
+     */
+    @PutMapping("/payment/update")
+    public ResponseEntity<UpdateOrderPaymentResponse> updateOrderPayment(@RequestBody UpdateOrderPaymentRequest request) {
+        log.info("Updating order payment for session: {}", request.getSessionId());
+        
+        UpdateOrderPaymentResponse response = orderPaymentService.updateOrderPayment(request);
+        
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Update order payment status by session ID
+     * PUT /api/v1/orders/payment/{sessionId}/{status}
+     */
+    @PutMapping("/payment/{sessionId}/{status}")
+    public ResponseEntity<UpdateOrderPaymentResponse> updateOrderPaymentBySessionId(
+            @PathVariable String sessionId, 
+            @PathVariable String status) {
+        log.info("Updating order payment for session: {} with status: {}", sessionId, status);
+        
+        UpdateOrderPaymentResponse response = orderPaymentService.updateOrderPaymentBySessionId(sessionId, status);
+        
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Get order details by session ID
+     * GET /api/v1/orders/session/{sessionId}
+     */
+    @GetMapping("/session/{sessionId}")
+    public ResponseEntity<UpdateOrderPaymentResponse> getOrderBySessionId(@PathVariable String sessionId) {
+        log.info("Getting order details for session: {}", sessionId);
+        
+        UpdateOrderPaymentResponse response = orderPaymentService.updateOrderPaymentBySessionId(sessionId, null);
+        
+        if (response.isSuccess()) {
+            return ResponseEntity.ok(response);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
 } 

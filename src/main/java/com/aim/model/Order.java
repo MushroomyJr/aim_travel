@@ -17,8 +17,8 @@ public class Order {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = false)
-    private User user;
+    @JoinColumn(name = "user_id", referencedColumnName = "id", nullable = true)
+    private User user; // Optional for guest users
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "flight_ticket", referencedColumnName = "id", nullable = false)
@@ -48,6 +48,12 @@ public class Order {
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "payment_status", nullable = false)
+    private String paymentStatus = "pending";
+
+    @Column(name = "stripe_session_id", nullable = true)
+    private String stripeSessionId;
 
     @PrePersist
     protected void onCreate() {
