@@ -3,76 +3,116 @@ package com.aim.service.impl;
 import com.aim.dto.OrderRequest;
 import com.aim.dto.OrderResponse;
 import com.aim.model.FlightTicket;
+import com.aim.model.Order;
+import com.aim.model.User;
+import com.aim.repository.FlightTicketRepository;
+import com.aim.repository.OrderRepository;
+import com.aim.repository.UserRepository;
 import com.aim.service.OrderService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
+import java.util.Optional;
+import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 @Slf4j
 public class OrderServiceImpl implements OrderService {
 
-    private final Random random = new Random();
+    private final OrderRepository orderRepository;
+    private final FlightTicketRepository flightTicketRepository;
+    private final UserRepository userRepository;
 
     @Override
+    @Transactional
     public OrderResponse createOrder(OrderRequest orderRequest) {
-        int ticketCount = orderRequest.getTicketIds() != null ? orderRequest.getTicketIds().size() : 0;
-        log.info("Creating order for {} tickets", ticketCount);
+        log.info("Creating order for user: {}", orderRequest.getUserEmail());
         
-        // For MVP, we'll generate mock tickets based on the ticket IDs
-        List<FlightTicket> tickets = generateMockTicketsFromIds(orderRequest.getTicketIds());
+        // Validate user exists
+        User user = userRepository.findByEmail(orderRequest.getUserEmail());
+        if (user == null) {
+            throw new IllegalArgumentException("User not found with email: " + orderRequest.getUserEmail());
+        }
         
-        // Calculate total price
-        BigDecimal totalPrice = tickets.stream()
-                .map(FlightTicket::getPrice)
+        // Validate flight tickets exist and belong to the user
+        List<FlightTicket> flightTickets = validateAndGetFlightTickets(orderRequest.getFlightTicketIds(), user.getEmail());
+        
+        // Calculate total cost
+        BigDecimal totalCost = flightTickets.stream()
+                .map(FlightTicket::getCost)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         
-        String orderId = "ORDER-" + System.currentTimeMillis();
+        // Generate itinerary number if not provided
+        String itineraryNumber = orderRequest.getItineraryNumber();
+        if (itineraryNumber == null || itineraryNumber.trim().isEmpty()) {
+            itineraryNumber = "ITIN-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        }
         
+        // Generate order number
+        String orderNumber = "ORD-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        
+        // Create orders for each flight ticket
+        List<Order> orders = new ArrayList<>();
+        for (FlightTicket flightTicket : flightTickets) {
+            Order order = Order.builder()
+                    .user(user)
+                    .flightTicket(flightTicket)
+                    .email(user.getEmail())
+                    .ticketInfo("Flight from " + flightTicket.getOrigin() + " to " + flightTicket.getDestination())
+                    .orderNumber(orderNumber)
+                    .itineraryNumber(itineraryNumber)
+                    .cost(flightTicket.getCost())
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            
+            orders.add(order);
+        }
+        
+        // Save all orders
+        List<Order> savedOrders = orderRepository.saveAll(orders);
+        
+        log.info("Created {} orders with itinerary number: {}", savedOrders.size(), itineraryNumber);
+        
+        // Build response
         OrderResponse response = new OrderResponse();
-        response.setOrderId(orderId);
-        response.setTickets(tickets);
-        response.setTotalPrice(totalPrice);
+        response.setOrderId(savedOrders.get(0).getId()); // Use first order ID as representative
+        response.setUserEmail(user.getEmail());
+        response.setItineraryNumber(itineraryNumber);
+        response.setFlightTickets(flightTickets);
+        response.setTotalCost(totalCost);
         response.setCreatedAt(LocalDateTime.now());
-        response.setUserId(orderRequest.getUserId().toString());
-        
-        log.info("Order created with ID: {}", orderId);
+        response.setStatus("CONFIRMED");
         
         return response;
     }
 
-    private List<FlightTicket> generateMockTicketsFromIds(List<String> ticketIds) {
-        List<FlightTicket> tickets = new ArrayList<>();
-        
-        for (String ticketId : ticketIds) {
-            FlightTicket ticket = createMockTicketFromId(ticketId);
-            tickets.add(ticket);
+    private List<FlightTicket> validateAndGetFlightTickets(List<Long> flightTicketIds, String userEmail) {
+        if (flightTicketIds == null || flightTicketIds.isEmpty()) {
+            throw new IllegalArgumentException("Flight ticket IDs cannot be null or empty");
         }
         
-        return tickets;
-    }
-
-    private FlightTicket createMockTicketFromId(String ticketId) {
-        String[] origins = {"JFK", "LAX", "ORD", "DFW", "ATL"};
-        String[] destinations = {"LAX", "JFK", "DFW", "ORD", "ATL"};
-        String[] airlines = {"Delta", "American Airlines", "United", "Southwest", "JetBlue"};
+        List<FlightTicket> flightTickets = new ArrayList<>();
+        for (Long ticketId : flightTicketIds) {
+            Optional<FlightTicket> ticketOpt = flightTicketRepository.findById(ticketId);
+            if (ticketOpt.isEmpty()) {
+                throw new IllegalArgumentException("Flight ticket not found with ID: " + ticketId);
+            }
+            
+            FlightTicket ticket = ticketOpt.get();
+            if (!ticket.getUser().getEmail().equals(userEmail)) {
+                throw new IllegalArgumentException("Flight ticket " + ticketId + " does not belong to user: " + userEmail);
+            }
+            
+            flightTickets.add(ticket);
+        }
         
-        FlightTicket ticket = new FlightTicket();
-        ticket.setId(ticketId);
-        ticket.setOrigin(origins[random.nextInt(origins.length)]);
-        ticket.setDestination(destinations[random.nextInt(destinations.length)]);
-        ticket.setDepartureTime(LocalDateTime.now().plusDays(random.nextInt(30)));
-        ticket.setArrivalTime(LocalDateTime.now().plusDays(random.nextInt(30)).plusHours(2 + random.nextInt(4)));
-        ticket.setAirline(airlines[random.nextInt(airlines.length)]);
-        ticket.setPrice(new BigDecimal(100 + random.nextInt(700)));
-        ticket.setStops(random.nextInt(2));
-        ticket.setRoundTrip(random.nextBoolean());
-        
-        return ticket;
+        return flightTickets;
     }
 } 

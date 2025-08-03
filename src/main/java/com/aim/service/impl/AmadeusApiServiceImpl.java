@@ -41,6 +41,9 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
         }
 
         try {
+            log.info("Searching for flights from {} to {} on {}", 
+                    searchRequest.getOrigin(), searchRequest.getDestination(), searchRequest.getDepartureDate());
+            
             // Get access token if needed
             String token = getAccessToken();
             if (token == null) {
@@ -51,6 +54,8 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
             // Build the search URL
             String searchUrl = buildSearchUrl(searchRequest);
             
+            log.info("Making Amadeus API call to: {}", searchUrl);
+            
             // Make the API call
             String response = webClient.get()
                     .uri(searchUrl)
@@ -60,6 +65,8 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
                     .bodyToMono(String.class)
                     .block();
 
+            log.debug("Amadeus API response: {}", response);
+            
             return parseFlightResponse(response, searchRequest);
             
         } catch (Exception e) {
@@ -70,10 +77,19 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
 
     @Override
     public boolean isApiAvailable() {
-        return apiConfig.getAmadeusClientId() != null && 
+        boolean available = apiConfig.getAmadeusClientId() != null && 
                apiConfig.getAmadeusClientSecret() != null &&
                !apiConfig.getAmadeusClientId().isEmpty() &&
                !apiConfig.getAmadeusClientSecret().isEmpty();
+        
+        if (available) {
+            log.info("Amadeus API credentials are configured");
+            log.debug("Client ID: {}", apiConfig.getAmadeusClientId());
+        } else {
+            log.warn("Amadeus API credentials are not properly configured");
+        }
+        
+        return available;
     }
 
     private String getAccessToken() {
@@ -82,42 +98,70 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
             return accessToken;
         }
 
-        try {
-            String tokenUrl = apiConfig.getAmadeusBaseUrl().replace("/v2", "/v1") + "/security/oauth2/token";
-            
-            String requestBody = String.format(
-                "grant_type=client_credentials&client_id=%s&client_secret=%s",
-                apiConfig.getAmadeusClientId(),
-                apiConfig.getAmadeusClientSecret()
-            );
+        // Try both test and production endpoints
+        String[] tokenUrls = {
+            "https://test.api.amadeus.com/v1/security/oauth2/token",
+            "https://api.amadeus.com/v1/security/oauth2/token"
+        };
 
-            String response = webClient.post()
-                    .uri(tokenUrl)
-                    .header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded")
-                    .bodyValue(requestBody)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
+        for (String tokenUrl : tokenUrls) {
+            try {
+                log.info("Requesting Amadeus access token from: {}", tokenUrl);
+                
+                // Build the request body properly
+                String requestBody = String.format(
+                    "grant_type=client_credentials&client_id=%s&client_secret=%s",
+                    apiConfig.getAmadeusClientId(),
+                    apiConfig.getAmadeusClientSecret()
+                );
 
-            JsonNode jsonResponse = objectMapper.readTree(response);
-            accessToken = jsonResponse.get("access_token").asText();
-            int expiresIn = jsonResponse.get("expires_in").asInt();
-            tokenExpiryTime = System.currentTimeMillis() + (expiresIn * 1000L) - 60000; // Expire 1 minute early
-            
-            log.info("Successfully obtained Amadeus access token");
-            return accessToken;
-            
-        } catch (Exception e) {
-            log.error("Failed to obtain Amadeus access token", e);
-            return null;
+                log.debug("Request body: {}", requestBody);
+
+                String response = webClient.post()
+                        .uri(tokenUrl)
+                        .header(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded")
+                        .header(HttpHeaders.ACCEPT, "application/json")
+                        .bodyValue(requestBody)
+                        .retrieve()
+                        .onStatus(status -> status.is4xxClientError() || status.is5xxServerError(),
+                                clientResponse -> {
+                                    log.error("Amadeus API error from {}: {} - {}", 
+                                             tokenUrl, clientResponse.statusCode(), 
+                                             clientResponse.statusCode().value());
+                                    return clientResponse.bodyToMono(String.class)
+                                            .flatMap(errorBody -> {
+                                                log.error("Error response body: {}", errorBody);
+                                                return Mono.error(new RuntimeException("Amadeus API error: " + errorBody));
+                                            });
+                                })
+                        .bodyToMono(String.class)
+                        .block();
+
+                log.debug("Token response: {}", response);
+
+                JsonNode jsonResponse = objectMapper.readTree(response);
+                accessToken = jsonResponse.get("access_token").asText();
+                int expiresIn = jsonResponse.get("expires_in").asInt();
+                tokenExpiryTime = System.currentTimeMillis() + (expiresIn * 1000L) - 60000; // Expire 1 minute early
+                
+                log.info("Successfully obtained Amadeus access token from: {}", tokenUrl);
+                return accessToken;
+                
+            } catch (Exception e) {
+                log.error("Failed to obtain Amadeus access token from: {}", tokenUrl, e);
+                // Continue to next URL if this one fails
+            }
         }
+        
+        log.error("Failed to obtain Amadeus access token from all endpoints");
+        return null;
     }
 
     private String buildSearchUrl(TicketSearchRequest request) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         String departureDate = request.getDepartureDate().format(formatter);
         
-        StringBuilder url = new StringBuilder(apiConfig.getAmadeusBaseUrl())
+        StringBuilder url = new StringBuilder("https://api.amadeus.com/v2")
                 .append("/shopping/flight-offers")
                 .append("?originLocationCode=").append(request.getOrigin())
                 .append("&destinationLocationCode=").append(request.getDestination())
@@ -130,6 +174,7 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
             url.append("&returnDate=").append(returnDate);
         }
 
+        log.info("Built Amadeus search URL: {}", url.toString());
         return url.toString();
     }
 
@@ -137,6 +182,8 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
         List<FlightTicket> tickets = new ArrayList<>();
         
         try {
+            log.debug("Parsing Amadeus response: {}", response);
+            
             JsonNode jsonResponse = objectMapper.readTree(response);
             JsonNode data = jsonResponse.get("data");
             
@@ -162,9 +209,13 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
         try {
             FlightTicket ticket = new FlightTicket();
             
-            // Parse basic info
-            ticket.setId(offer.get("id").asText());
-            ticket.setPrice(new BigDecimal(offer.get("price").get("total").asText()));
+            // Parse pricing
+            JsonNode pricingOptions = offer.get("pricingOptions");
+            if (pricingOptions != null && pricingOptions.isArray() && pricingOptions.size() > 0) {
+                JsonNode firstOption = pricingOptions.get(0);
+                String totalPrice = firstOption.get("price").get("total").asText();
+                ticket.setCost(new BigDecimal(totalPrice));
+            }
             
             // Parse itinerary
             JsonNode itineraries = offer.get("itineraries");
@@ -180,8 +231,12 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
                     String departureTimeStr = firstSegment.get("departure").get("at").asText();
                     String arrivalTimeStr = lastSegment.get("arrival").get("at").asText();
                     
-                    ticket.setDepartureTime(LocalDateTime.parse(departureTimeStr.replace("Z", "")));
-                    ticket.setArrivalTime(LocalDateTime.parse(arrivalTimeStr.replace("Z", "")));
+                    // Handle timezone format (remove Z and parse)
+                    departureTimeStr = departureTimeStr.replace("Z", "");
+                    arrivalTimeStr = arrivalTimeStr.replace("Z", "");
+                    
+                    ticket.setDepartureTime(LocalDateTime.parse(departureTimeStr));
+                    ticket.setArrivalTime(LocalDateTime.parse(arrivalTimeStr));
                     
                     // Parse origin and destination
                     ticket.setOrigin(firstSegment.get("departure").get("iataCode").asText());
@@ -209,10 +264,20 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
                     String returnDepartureTimeStr = firstSegment.get("departure").get("at").asText();
                     String returnArrivalTimeStr = lastSegment.get("arrival").get("at").asText();
                     
-                    ticket.setReturnDepartureTime(LocalDateTime.parse(returnDepartureTimeStr.replace("Z", "")));
-                    ticket.setReturnArrivalTime(LocalDateTime.parse(returnArrivalTimeStr.replace("Z", "")));
+                    returnDepartureTimeStr = returnDepartureTimeStr.replace("Z", "");
+                    returnArrivalTimeStr = returnArrivalTimeStr.replace("Z", "");
+                    
+                    ticket.setReturnDepartureTime(LocalDateTime.parse(returnDepartureTimeStr));
+                    ticket.setReturnArrivalTime(LocalDateTime.parse(returnArrivalTimeStr));
                 }
             }
+            
+            // Set default values for missing fields
+            ticket.setBaggage("1 checked bag");
+            ticket.setTravelClass("Economy");
+            
+            log.debug("Parsed flight ticket: {} to {} for ${}", 
+                     ticket.getOrigin(), ticket.getDestination(), ticket.getCost());
             
             return ticket;
             
