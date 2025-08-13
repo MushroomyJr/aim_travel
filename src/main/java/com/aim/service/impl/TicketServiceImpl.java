@@ -1,9 +1,12 @@
 package com.aim.service.impl;
 
 import com.aim.config.ApiConfig;
-import com.aim.dto.TicketSearchRequest;
 import com.aim.dto.PaginatedResponse;
+import com.aim.dto.TicketSearchRequest;
 import com.aim.model.FlightTicket;
+import com.aim.model.User;
+import com.aim.repository.FlightTicketRepository;
+import com.aim.repository.UserRepository;
 import com.aim.service.AmadeusApiService;
 import com.aim.service.TicketService;
 import lombok.RequiredArgsConstructor;
@@ -25,28 +28,28 @@ public class TicketServiceImpl implements TicketService {
 
     private final ApiConfig apiConfig;
     private final AmadeusApiService amadeusApiService;
+    private final FlightTicketRepository flightTicketRepository;
+    private final UserRepository userRepository;
     private final Random random = new Random();
 
     @Override
     public PaginatedResponse<FlightTicket> searchTickets(TicketSearchRequest searchRequest) {
-        log.info("Searching tickets for: {} to {} on {} (page: {}, size: {})", 
+        log.info("Searching tickets from {} to {} on {}", 
                 searchRequest.getOrigin(), 
                 searchRequest.getDestination(), 
-                searchRequest.getDepartureDate(),
-                searchRequest.getPage(),
-                searchRequest.getSize());
-        
+                searchRequest.getDepartureDate());
+
         List<FlightTicket> allTickets = new ArrayList<>();
-        
-        // Try to get real tickets from Amadeus API if available
-        if (amadeusApiService.isApiAvailable() && !apiConfig.isUseMockData()) {
-            log.info("Attempting to fetch real tickets from Amadeus API");
+
+        // Try to get real tickets from Amadeus API first
+        if (amadeusApiService.isApiAvailable()) {
+            log.info("Amadeus API is available, searching for real tickets");
             allTickets = amadeusApiService.searchRealTickets(searchRequest);
         }
-        
-        // If no real tickets found or API not available, fall back to mock data
+
+        // If no real tickets found, generate mock tickets
         if (allTickets.isEmpty()) {
-            log.info("Using mock data for ticket search");
+            log.info("No real tickets found, generating mock tickets");
             allTickets = generateMockTickets(searchRequest);
         }
         
@@ -95,19 +98,29 @@ public class TicketServiceImpl implements TicketService {
         int flightMinutes = random.nextInt(60);
         LocalDateTime arrivalDateTime = departureDateTime.plusHours(flightHours).plusMinutes(flightMinutes);
         
-        // Price between $100-$800
-        BigDecimal price = new BigDecimal(100 + random.nextInt(700));
+        // Format duration as human-readable string
+        String duration = flightHours + "h " + flightMinutes + "m";
+        
+        // Cost between $100-$800
+        BigDecimal cost = new BigDecimal(100 + random.nextInt(700));
         
         FlightTicket ticket = new FlightTicket();
-        ticket.setId("TICKET-" + System.currentTimeMillis() + "-" + index);
         ticket.setOrigin(request.getOrigin());
         ticket.setDestination(request.getDestination());
         ticket.setDepartureTime(departureDateTime);
         ticket.setArrivalTime(arrivalDateTime);
         ticket.setAirline(airline);
-        ticket.setPrice(price);
+        ticket.setCost(cost);
         ticket.setStops(random.nextInt(2)); // 0 or 1 stops
         ticket.setRoundTrip(request.isRoundTrip());
+        ticket.setDuration(duration);
+        ticket.setBaggage("1 checked bag");
+        ticket.setTravelClass("Economy");
+        
+        // Generate outbound segments
+        List<FlightTicket.FlightSegment> outboundSegments = generateMockSegments(
+            request.getOrigin(), request.getDestination(), departureDateTime, arrivalDateTime, airline);
+        ticket.setOutboundSegments(outboundSegments);
         
         // If round trip, add return flight
         if (request.isRoundTrip() && request.getReturnDate() != null) {
@@ -117,9 +130,55 @@ public class TicketServiceImpl implements TicketService {
             
             ticket.setReturnDepartureTime(returnDepartureDateTime);
             ticket.setReturnArrivalTime(returnArrivalDateTime);
+            
+            // Generate return segments
+            List<FlightTicket.FlightSegment> returnSegments = generateMockSegments(
+                request.getDestination(), request.getOrigin(), returnDepartureDateTime, returnArrivalDateTime, airline);
+            ticket.setReturnSegments(returnSegments);
         }
         
         return ticket;
+    }
+    
+    /**
+     * Generate mock flight segments
+     */
+    private List<FlightTicket.FlightSegment> generateMockSegments(String origin, String destination, 
+                                                                 LocalDateTime departureTime, LocalDateTime arrivalTime, 
+                                                                 String airline) {
+        List<FlightTicket.FlightSegment> segments = new ArrayList<>();
+        
+        // Generate flight number
+        String flightNumber = airline + String.format("%03d", random.nextInt(999) + 1);
+        
+        // Generate aircraft type
+        String[] aircraftTypes = {"B737", "A320", "B787", "A350", "B777"};
+        String aircraft = aircraftTypes[random.nextInt(aircraftTypes.length)];
+        
+        // Generate terminal and gate
+        String terminal = String.valueOf(random.nextInt(5) + 1);
+        String gate = String.valueOf(random.nextInt(50) + 1);
+        
+        // Calculate duration
+        long durationMinutes = java.time.Duration.between(departureTime, arrivalTime).toMinutes();
+        String duration = (durationMinutes / 60) + "h " + (durationMinutes % 60) + "m";
+        
+        FlightTicket.FlightSegment segment = FlightTicket.FlightSegment.builder()
+                .departureAirport(origin)
+                .arrivalAirport(destination)
+                .departureTime(departureTime)
+                .arrivalTime(arrivalTime)
+                .airline(airline)
+                .flightNumber(flightNumber)
+                .duration(duration)
+                .aircraft(aircraft)
+                .terminal(terminal)
+                .gate(gate)
+                .build();
+        
+        segments.add(segment);
+        
+        return segments;
     }
     
     /**

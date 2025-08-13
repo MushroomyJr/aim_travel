@@ -1,2 +1,7 @@
-src/main/resources/application.yml 
+src/main/resources/
+*/application.yml 
 target/
+test_payment_update_path.sh
+test_payment_update.sh
+test_ticket_creation.sh
+*.md
