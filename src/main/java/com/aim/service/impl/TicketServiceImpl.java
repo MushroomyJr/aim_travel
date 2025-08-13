@@ -98,8 +98,11 @@ public class TicketServiceImpl implements TicketService {
         int flightMinutes = random.nextInt(60);
         LocalDateTime arrivalDateTime = departureDateTime.plusHours(flightHours).plusMinutes(flightMinutes);
         
+<<<<<<< HEAD
         // Format duration as human-readable string
         String duration = flightHours + "h " + flightMinutes + "m";
+=======
+>>>>>>> e17a9c88759d6c836467e3b002daa9717f626d68
         // Cost between $100-$800
         BigDecimal cost = new BigDecimal(100 + random.nextInt(700));
         

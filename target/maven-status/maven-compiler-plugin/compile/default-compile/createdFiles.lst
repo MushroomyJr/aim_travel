@@ -4,7 +4,10 @@ com\aim\service\impl\AmadeusApiServiceImpl.class
 com\aim\service\impl\TicketCreationServiceImpl.class
 com\aim\model\FlightTicket$FlightTicketBuilder.class
 com\aim\service\AmadeusApiService.class
+<<<<<<< HEAD
 com\aim\model\FlightTicket$FlightSegment$FlightSegmentBuilder.class
+=======
+>>>>>>> e17a9c88759d6c836467e3b002daa9717f626d68
 com\aim\dto\UpdateOrderPaymentResponse$UpdateOrderPaymentResponseBuilder.class
 com\aim\dto\UpdateOrderPaymentResponse.class
 com\aim\config\WebSocketConfig.class
@@ -26,7 +29,10 @@ com\aim\service\UserService.class
 com\aim\dto\CreateCheckoutSessionRequest.class
 com\aim\AimBackendApplication.class
 com\aim\dto\TicketSearchResponse.class
+<<<<<<< HEAD
 com\aim\model\FlightTicket$FlightSegment.class
+=======
+>>>>>>> e17a9c88759d6c836467e3b002daa9717f626d68
 com\aim\model\User.class
 com\aim\dto\CheckoutSessionResponse.class
 com\aim\controller\TestController.class

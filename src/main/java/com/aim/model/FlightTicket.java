@@ -72,10 +72,10 @@ public class FlightTicket {
 
     @Column(nullable = true)
     private String travelClass;
-    
+
     @Column(nullable = true)
     private String duration; // Flight duration in ISO 8601 format (e.g., "PT5H7M")
-    
+
     // Segment information for detailed flight routing
     @Transient // Don't persist to database, only for API response
     private List<FlightSegment> outboundSegments;

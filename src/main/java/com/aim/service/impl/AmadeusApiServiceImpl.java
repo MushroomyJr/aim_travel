@@ -248,6 +248,7 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
         try {
             FlightTicket ticket = new FlightTicket();
             
+<<<<<<< HEAD
             // Parse pricing - try direct price field first, then pricingOptions
             JsonNode priceNode = offer.get("price");
             if (priceNode != null && priceNode.has("total")) {
@@ -265,6 +266,14 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
                         log.debug("Parsed price from pricingOptions: {}", totalPrice);
                     }
                 }
+=======
+            // Parse pricing
+            JsonNode pricingOptions = offer.get("pricingOptions");
+            if (pricingOptions != null && pricingOptions.isArray() && pricingOptions.size() > 0) {
+                JsonNode firstOption = pricingOptions.get(0);
+                String totalPrice = firstOption.get("price").get("total").asText();
+                ticket.setCost(new BigDecimal(totalPrice));
+>>>>>>> e17a9c88759d6c836467e3b002daa9717f626d68
             }
             
             // Parse itinerary
@@ -328,13 +337,17 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
                     String returnDepartureTimeStr = firstSegment.get("departure").get("at").asText();
                     String returnArrivalTimeStr = lastSegment.get("arrival").get("at").asText();
                     
+<<<<<<< HEAD
                     log.debug("Return flight times - departure: {}, arrival: {}", returnDepartureTimeStr, returnArrivalTimeStr);
                     
+=======
+>>>>>>> e17a9c88759d6c836467e3b002daa9717f626d68
                     returnDepartureTimeStr = returnDepartureTimeStr.replace("Z", "");
                     returnArrivalTimeStr = returnArrivalTimeStr.replace("Z", "");
                     
                     ticket.setReturnDepartureTime(LocalDateTime.parse(returnDepartureTimeStr));
                     ticket.setReturnArrivalTime(LocalDateTime.parse(returnArrivalTimeStr));
+<<<<<<< HEAD
                     
                     log.debug("Set return flight times - departure: {}, arrival: {}", 
                              ticket.getReturnDepartureTime(), ticket.getReturnArrivalTime());
@@ -365,6 +378,8 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
                     
                     // Optionally, we could generate mock return flight data here
                     // For now, we'll leave the return times as null
+=======
+>>>>>>> e17a9c88759d6c836467e3b002daa9717f626d68
                 }
             }
             
@@ -372,6 +387,7 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
             ticket.setBaggage("1 checked bag");
             ticket.setTravelClass("Economy");
             
+<<<<<<< HEAD
             log.debug("Parsed flight ticket: {} to {} for ${} (duration: {})", 
                      ticket.getOrigin(), ticket.getDestination(), ticket.getCost(), ticket.getDuration());
             
@@ -385,6 +401,8 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
             ticket.setBaggage("1 checked bag");
             ticket.setTravelClass("Economy");
             
+=======
+>>>>>>> e17a9c88759d6c836467e3b002daa9717f626d68
             log.debug("Parsed flight ticket: {} to {} for ${}", 
                      ticket.getOrigin(), ticket.getDestination(), ticket.getCost());
             
