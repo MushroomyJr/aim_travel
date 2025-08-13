@@ -161,7 +161,7 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         String departureDate = request.getDepartureDate().format(formatter);
         
-        StringBuilder url = new StringBuilder(apiConfig.getAmadeusBaseUrl())
+        StringBuilder url = new StringBuilder("https://api.amadeus.com/v2")
                 .append("/shopping/flight-offers")
                 .append("?originLocationCode=").append(request.getOrigin())
                 .append("&destinationLocationCode=").append(request.getDestination())
@@ -380,6 +380,13 @@ public class AmadeusApiServiceImpl implements AmadeusApiService {
                 log.warn("Cost is null for ticket from {} to {}. Available fields in offer: {}", 
                         ticket.getOrigin(), ticket.getDestination(), offer.fieldNames());
             }
+            
+            // Set default values for missing fields
+            ticket.setBaggage("1 checked bag");
+            ticket.setTravelClass("Economy");
+            
+            log.debug("Parsed flight ticket: {} to {} for ${}", 
+                     ticket.getOrigin(), ticket.getDestination(), ticket.getCost());
             
             return ticket;
             

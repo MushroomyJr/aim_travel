@@ -100,7 +100,6 @@ public class TicketServiceImpl implements TicketService {
         
         // Format duration as human-readable string
         String duration = flightHours + "h " + flightMinutes + "m";
-        
         // Cost between $100-$800
         BigDecimal cost = new BigDecimal(100 + random.nextInt(700));
         
